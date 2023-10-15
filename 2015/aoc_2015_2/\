@@ -1,0 +1,42 @@
+// https://adventofcode.com/2015/day/2
+
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+
+struct Gift {
+    dimensions: [u32; 3],
+}
+
+impl Gift {
+    fn new(w: u32, l: u32, h: u32) -> Gift {
+        let mut gift = Gift {
+            dimensions: [w, l, h],
+        };
+
+        gift.dimensions.sort();
+        gift
+    }
+
+    const fn get_required_wrapping_paper(&self) -> u32 {
+        let slack = self.dimensions[0] * self.dimensions[1];
+        let packaging_surface_area =
+            get_cuboid_surface_area(self.dimensions[0], self.dimensions[1], self.dimensions[2]);
+        packaging_surface_area + slack
+    }
+}
+
+const fn get_rectangle_area(w: u32, l: u32) -> u32 {
+    w * l
+}
+
+const fn get_cuboid_surface_area(w: u32, l: u32, h: u32) -> u32 {
+    2 * (get_rectangle_area(w, l) + get_rectangle_area(w, h) + get_rectangle_area(h, l))
+}
+
+fn main() {
+    let file = File::open("input.txt").expect("input.txt is expected to be in the src directory.");
+    let reader = BufReader::new(file);
+    for line in reader.lines() {
+        line = line.unwrap();
+    }
+}
