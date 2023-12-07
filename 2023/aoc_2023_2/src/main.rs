@@ -147,31 +147,27 @@ mod tests {
     }
 
     fn reconstruct_input(games: &Vec<Game>) -> Vec<String> {
-        let mut reconstructed_input: Vec<String> = Vec::new();
+        games
+            .iter()
+            .map(|game| {
+                let mut game_string = format!("Game {}:", game.id);
+                for cube_set in &game.cube_sets {
+                    for cube in &cube_set.cubes {
+                        game_string += &format!(
+                            " {} {},",
+                            cube.get_count().unwrap_or_default(),
+                            cube.get_name()
+                        );
+                    }
 
-        for game in games {
-            let mut game_string = "Game ".to_owned();
-            game_string.push_str(&game.id.to_string());
-            game_string.push_str(":");
-
-            for cube_set in &game.cube_sets {
-                for cube in &cube_set.cubes {
-                    game_string.push_str(" ");
-                    game_string.push_str(&cube.get_count().unwrap().to_string());
-                    game_string.push_str(" ");
-                    game_string.push_str(cube.get_name());
-                    game_string.push_str(",");
+                    game_string.pop();
+                    game_string += ";";
                 }
 
                 game_string.pop();
-                game_string.push_str(";");
-            }
-
-            game_string.pop();
-            reconstructed_input.push(game_string);
-        }
-
-        reconstructed_input
+                game_string
+            })
+            .collect()
     }
 
     #[test]
