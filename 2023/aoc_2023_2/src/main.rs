@@ -4,6 +4,7 @@ use std::{
 };
 
 struct Game {
+    id: u32,
     cube_sets: Vec<CubeSet>,
 }
 struct CubeSet {
@@ -14,6 +15,24 @@ enum Cube {
     Red(u32),
     Green(u32),
     Blue(u32),
+}
+
+trait CubeComparison {
+    fn is_same_type(&self, other: &Self) -> bool;
+}
+
+impl CubeComparison for Cube {
+    fn is_same_type(&self, other: &Self) -> bool {
+        std::mem::discriminant(self) == std::mem::discriminant(other)
+    }
+}
+
+impl Cube {
+    fn get_count(&self) -> Option<u32> {
+        match self {
+            Cube::Red(value) | Cube::Green(value) | Cube::Blue(value) => Some(*value),
+        }
+    }
 }
 
 fn parse_input() -> Result<Vec<Game>, io::Error> {
@@ -29,8 +48,11 @@ fn parse_input() -> Result<Vec<Game>, io::Error> {
 }
 
 fn parse_line(line: &str) -> Result<Game, io::Error> {
-    // discard unnecessary Game x:
-    let cleaned_line = line.split(":").last().unwrap();
+    let mut id_separator = line.split(":");
+    let id_string = id_separator.next().unwrap();
+    let id: u32 = id_string.split("Game ").last().unwrap().parse().unwrap();
+
+    let cleaned_line = id_separator.last().unwrap();
     let game = cleaned_line.split(";");
     let mut cube_sets: Vec<CubeSet> = Vec::new();
 
@@ -44,7 +66,7 @@ fn parse_line(line: &str) -> Result<Game, io::Error> {
         cube_sets.push(CubeSet { cubes: cube_set });
     }
 
-    Ok(Game { cube_sets })
+    Ok(Game { id, cube_sets })
 }
 
 fn parse_cube(cube_text: &str) -> Result<Cube, io::Error> {
@@ -64,8 +86,48 @@ fn parse_cube(cube_text: &str) -> Result<Cube, io::Error> {
     }
 }
 
+fn remove_invalid_games(games: &mut Vec<Game>) {
+    let invalid_indices: Vec<usize> = games
+        .iter()
+        .enumerate()
+        .filter_map(|(i, game)| {
+            if game
+                .cube_sets
+                .iter()
+                .any(|cube_set| !is_cube_set_valid(&cube_set))
+            {
+                Some(i)
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    for &i in invalid_indices.iter().rev() {
+        games.remove(i);
+    }
+}
+
+fn is_cube_set_valid(cube_set: &CubeSet) -> bool {
+    let limits = [Cube::Red(12), Cube::Green(13), Cube::Blue(14)];
+    for cube in &cube_set.cubes {
+        if limits
+            .iter()
+            .any(|limit| cube.is_same_type(&limit) && cube.get_count() > limit.get_count())
+        {
+            return false;
+        }
+    }
+
+    true
+}
+
 fn main() -> io::Result<()> {
-    let games = parse_input()?;
+    let mut games = parse_input()?;
+    remove_invalid_games(&mut games);
+
+    let tot = games.iter().fold(0, |acc, game| acc + game.id);
+    println!("{}", tot);
 
     Ok(())
 }
@@ -75,14 +137,6 @@ mod tests {
     use super::*;
 
     impl Cube {
-        fn get_count(&self) -> u32 {
-            match self {
-                Cube::Red(value) => *value,
-                Cube::Green(value) => *value,
-                Cube::Blue(value) => *value,
-            }
-        }
-
         fn get_name(&self) -> &str {
             match self {
                 Cube::Red(_) => "red",
@@ -95,15 +149,15 @@ mod tests {
     fn reconstruct_input(games: &Vec<Game>) -> Vec<String> {
         let mut reconstructed_input: Vec<String> = Vec::new();
 
-        for (i, game) in games.iter().enumerate() {
+        for game in games {
             let mut game_string = "Game ".to_owned();
-            game_string.push_str(&(i + 1).to_string());
+            game_string.push_str(&game.id.to_string());
             game_string.push_str(":");
 
             for cube_set in &game.cube_sets {
                 for cube in &cube_set.cubes {
                     game_string.push_str(" ");
-                    game_string.push_str(&cube.get_count().to_string());
+                    game_string.push_str(&cube.get_count().unwrap().to_string());
                     game_string.push_str(" ");
                     game_string.push_str(cube.get_name());
                     game_string.push_str(",");
