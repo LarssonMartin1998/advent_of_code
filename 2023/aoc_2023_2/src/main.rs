@@ -3,14 +3,18 @@ use std::{
     io::{self, BufRead, BufReader},
 };
 
+#[derive(Clone)]
 struct Game {
     id: u32,
     cube_sets: Vec<CubeSet>,
 }
+
+#[derive(Clone)]
 struct CubeSet {
     cubes: Vec<Cube>,
 }
 
+#[derive(Clone)]
 enum Cube {
     Red(u32),
     Green(u32),
@@ -74,7 +78,6 @@ fn parse_cube(cube_text: &str) -> Result<Cube, io::Error> {
     let mut split_cube = cleaned_cube.split(" ");
     let num_cubes: u32 = split_cube.next().unwrap().parse().unwrap();
     let cube_type_text = split_cube.last().unwrap();
-
     match cube_type_text {
         "red" => Ok(Cube::Red(num_cubes)),
         "green" => Ok(Cube::Green(num_cubes)),
@@ -122,13 +125,41 @@ fn is_cube_set_valid(cube_set: &CubeSet) -> bool {
     true
 }
 
+fn part_one(games: &Vec<Game>) -> u32 {
+    let mut games_copy = games.to_vec();
+    remove_invalid_games(&mut games_copy);
+    games_copy.iter().fold(0, |acc, game| acc + game.id)
+}
+
+fn part_two(games: &Vec<Game>) -> u32 {
+    games.iter().fold(0, |acc, game| {
+        let mut highest: [Cube; 3] = [Cube::Red(0), Cube::Green(0), Cube::Blue(0)];
+
+        for cube_set in &game.cube_sets {
+            for cube in &cube_set.cubes {
+                try_update_highest_of_type(&mut highest, &cube);
+            }
+        }
+
+        acc + highest
+            .iter()
+            .fold(1, |acc, cube| acc * cube.get_count().unwrap_or_default())
+    })
+}
+
+fn try_update_highest_of_type(current_highest: &mut [Cube; 3], other: &Cube) {
+    for cube in current_highest
+        .iter_mut()
+        .filter(|cube| cube.is_same_type(other) && other.get_count() > cube.get_count())
+    {
+        *cube = other.clone();
+    }
+}
+
 fn main() -> io::Result<()> {
-    let mut games = parse_input()?;
-    remove_invalid_games(&mut games);
-
-    let tot = games.iter().fold(0, |acc, game| acc + game.id);
-    println!("{}", tot);
-
+    let games = parse_input()?;
+    println!("Results for part one: {}", part_one(&games));
+    println!("Results for part two: {}", part_two(&games));
     Ok(())
 }
 
